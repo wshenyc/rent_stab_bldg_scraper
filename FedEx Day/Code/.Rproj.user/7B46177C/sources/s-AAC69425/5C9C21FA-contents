@@ -11,17 +11,18 @@ library(pdftools)
 library(glue)
 library(reshape2)
 
-dir <- "C:/Users/shenw/Documents/Fedex Day May 2022/FedEx Day"
+dir <- "C:/Users/shenw/Documents/Fedex Day May 2022/FedEx-May-2022/FedEx Day"
+
+dhcr_si <- pdf_text(glue("{dir}/Data/2020-DHCR-Bldg-Staten-Island.pdf"))
 ```
 
 ```{r}
-dhcr_si <- pdf_text(glue("{dir}/Data/2020-DHCR-Bldg-Staten-Island.pdf"))
-
 temp_vector <- ""
 final_df <- data.frame()
 
 for (i in 1:length(dhcr_si)) {
   temp_vector <- dhcr_si[i]
+  temp_vector <- trimws(temp_vector)
   temp_vector <- strsplit(temp_vector, "\n")
   temp_vector <- temp_vector[[1]]
   temp_vector <- temp_vector[3:57] 
@@ -46,25 +47,32 @@ for (i in 1:length(dhcr_si)) {
   
   names(result) <- c("zipcode", "bldgno1", "street1", "stsufx1","bldno2","street2","stsufx2", 
                    "city", "county", "status1", "status2","status3","block","lot")
-  # 
-  # result <-result %>% 
-  #   mutate(across(where(is.character), str_trim)) 
-  # 
-  # result[result == ""] <- NA 
-  
+
+  result <-result %>%
+    mutate(across(where(is.character), str_trim))
+
+  result[result == ""] <- NA
+
   result$page <- i
   
   final_df <- rbind(final_df, result)
 
 }
 
+```
 
 
+
+```{r}
 #final_df %>% write_csv(glue("{dir}/final_df_si.csv"))
 
+
+
 test5 <- dhcr_si[2]
+test5 <- trimws(test5)
 test5 <- strsplit(test5, "\n")
 test5 <- test5[[1]]
+
 test5 <- test5[3:57] 
 writeLines(test5, "temp.txt")
 
