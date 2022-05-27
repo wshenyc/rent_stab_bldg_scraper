@@ -9,13 +9,75 @@ output: html_document
 library(tidyverse)
 library(pdftools)
 library(glue)
-library(reshape2)
+library(tabulizer)
 
-dir <- "C:/Users/shenw/Documents/Fedex Day May 2022/FedEx-May-2022/FedEx Day"
+#work dir
+#dir <- "C:/Users/shenw/Documents/Fedex Day May 2022/FedEx-May-2022/FedEx Day"
+#home dir
+dir <- "/Users/winnieshen/Documents/GitHub/FedEx-May-2022/Fedex Day"
+file_ending <- "/Data/2020-DHCR-Bldg-"
+  
+#dhcr_si <- pdf_text(glue("{dir}/Data/2020-DHCR-Bldg-Staten-Island.pdf"))
 
-dhcr_si <- pdf_text(glue("{dir}/Data/2020-DHCR-Bldg-Staten-Island.pdf"))
+dhcr_si <-glue("{dir}/Data/2020-DHCR-Bldg-Staten-Island.pdf")
 ```
 
+```{r}
+#boro_list <- c("Bronx", "Brooklyn","Manhattan")
+final_df <- data.frame()
+
+dhcr_file <- glue("{dir}/Data/2020-DHCR-Bldg-Queens.pdf")
+
+dhcr_extract <- extract_tables(dhcr_file)
+  
+for (j in 1:length(dhcr_extract)) {
+  temp <- dhcr_extract[[j]]
+  final_df <- rbind(final_df, temp)
+}
+
+final_df_v2 <- final_df[- grep("BLDGNO1", final_df$V2),]
+final_df_v2 <- final_df_v2 %>% 
+  separate(V13, c("Block", "Lot"), "^\\S*\\K\\s+")
+  
+names(final_df_v2) <- c("zipcode", "bldgno1", "street1",
+                        "stsufx1","bldno2","street2","stsufx2", 
+                        "city", "county", "status1", "status2","status3",
+                        "block","lot")
+
+# final_df_v2$county <- "63" #queens county 
+# final_df_v2 <- final_df_v2 %>% 
+#   mutate(city = gsub("[^[:alpha:] ]", "", city)) #remove only numbers from the city col
+
+final_df_v2 %>% write_csv(glue("{dir}/dhcr_qn_scraped.csv"))
+
+test <- read_csv(glue("{dir}/dhcr_mn_scraped.csv"))
+```
+
+
+```{r}
+test2 <- extract_tables(dhcr_si)
+
+final_df <- data.frame()
+
+for (i in 1:length(test2)) {
+  temp <- test2[[i]]
+  final_df <- rbind(final_df, temp)
+}
+
+final_df_v2 <- final_df[- grep("BLDGNO1", final_df$V2),]
+  final_df_v2 <- final_df_v2 %>% 
+    separate(V13, c("Block", "Lot"), "^\\S*\\K\\s+")
+  
+names(final_df_v2) <- c("zipcode", "bldgno1", "street1", "stsufx1","bldno2","street2","stsufx2", 
+                   "city", "county", "status1", "status2","status3","block","lot")
+
+final_df_v2 <- data.frame(final_df_v2)
+
+final_df_v2 %>% write_csv(glue("{dir}/dhcr_si_scraped.csv"))
+
+```
+
+#all failures!! 
 ```{r}
 temp_vector <- ""
 final_df <- data.frame()
@@ -33,14 +95,14 @@ for (i in 1:length(dhcr_si)) {
                    widths = c(8, #zip
                               19, #bldgno1
                               16, #street1
-                              8, #stsufx1
-                              12, #bldgno2 ##
+                              10, #stsufx1 #8?
+                              14, #bldgno2 #12? 
                               27, #street2
                               8, #stsufx2
                               14, #city
                               7, #county
                               20, #status1
-                              17, #status2  #was 17
+                              14, #status2  #was 17
                               13, #status3 #WAS 13
                               5, #block #WAS 6 
                               4)) #lot 
@@ -48,10 +110,10 @@ for (i in 1:length(dhcr_si)) {
   names(result) <- c("zipcode", "bldgno1", "street1", "stsufx1","bldno2","street2","stsufx2", 
                    "city", "county", "status1", "status2","status3","block","lot")
 
-  result <-result %>%
-    mutate(across(where(is.character), str_trim))
-
-  result[result == ""] <- NA
+  # result <-result %>%
+  #   mutate(across(where(is.character), str_trim))
+  # 
+  # result[result == ""] <- NA
 
   result$page <- i
   
@@ -61,6 +123,35 @@ for (i in 1:length(dhcr_si)) {
 
 ```
 
+```{r}
+all_lengths = ""
+
+
+for (i in 1:length(dhcr_si)) {
+  test <- dhcr_si[i]
+  test <- trimws(dhcr_si)
+  test <- strsplit(test, "\n")
+  test <- test[[1]]
+  test <- test[3:57] 
+  
+  max <- max(str_length(test))
+  min <- min(str_length(test))
+  page <- i 
+  
+  all_lengths <- paste(all_lengths, max, min, page, sep = " ")
+}
+
+all_lengths <- as.data.frame(all_lengths)
+
+  test <- dhcr_si[5]
+  test <- trimws(dhcr_si)
+  test <- strsplit(test, "\n")
+  test <- test[[1]]
+  test <- test[3:57] 
+  
+  str_length(test)
+  
+```
 
 
 ```{r}
