@@ -1,0 +1,105 @@
+---
+title: "Map"
+author: "Winnie Shen"
+date: "5/27/2022"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(glue)
+
+#work dir 
+dir <- "C:/Users/shenw/Documents/Fedex Day May 2022/FedEx-May-2022/FedEx Day"
+```
+
+```{r}
+pluto <- read_csv(glue("{dir}/Data/pluto_21v4.csv"))
+
+pluto_small <- pluto %>% 
+  select(bbl, latitude, longitude)
+```
+
+```{r}
+bk_dhcr <- read_csv(glue("{dir}/dhcr_bk_scraped.csv"))
+bx_dhcr <- read_csv(glue("{dir}/dhcr_bx_scraped.csv"))
+mn_dhcr <- read_csv(glue("{dir}/dhcr_mn_scraped.csv"))
+qn_dhcr <- read_csv(glue("{dir}/dhcr_qn_scraped.csv"))
+si_dhcr <- read_csv(glue("{dir}/dhcr_si_scraped.csv"))
+
+bk_dhcr$boro <- "3"
+bx_dhcr$boro <- "2"
+mn_dhcr$boro <- "1"
+qn_dhcr$boro <- "4"
+si_dhcr$boro <- "5"
+
+master_dhcr <- rbind(bk_dhcr, bx_dhcr, mn_dhcr, qn_dhcr, si_dhcr) %>% 
+  distinct()
+
+master_dhcr %>% write_csv("master_dhcr.csv")
+```
+
+#Matching with Pluto
+```{r}
+pluto_small <- pluto_small %>% 
+  mutate(bbl = as.character(bbl))
+
+master_dhcr_geo <- master_dhcr %>% 
+  filter(!is.na(block) | !is.na(lot)) %>% #removing the bldgs without block/lots 
+  mutate(bbl = paste0(boro,
+                     sprintf("%05d", block),
+                     sprintf("%04d", lot))) %>% 
+  left_join(pluto_small, by = "bbl") %>% 
+  distinct()
+
+master_dhcr_geo <- master_dhcr_geo %>% 
+  filter(!is.na(latitude)) #lost about 700 bldgs 
+
+master_dhcr_geo %>% write_csv(glue("{dir}/Data/master_dhcr_geo.csv"))
+```
+
+#maybe we'll even add in some RS unit info
+#Source: https://github.com/JustFixNYC/nyc-doffer/blob/main/r/rs_join_2019_2020.R
+```{r}
+rs_19 <- read_csv('https://s3.amazonaws.com/justfix-data/pluto_19v1_2019_soa.csv')
+rs_20 <- read_csv('https://s3.amazonaws.com/justfix-data/pluto_19v2_2020_soa.csv')
+```
+
+```{r}
+# Clean up 2019 and 2020 data to reflect structure of `rentstab_v2` table in nycdb
+rs_19_cleaned <- rs_19 %>% 
+  filter(success == TRUE) %>% 
+  select(bbl, rent_stabilized_units, soa_url) %>%
+  rename(ucbbl = bbl, uc2018 = rent_stabilized_units, pdfsoa2018 = soa_url)
+
+rs_20_cleaned <- rs_20 %>% 
+  filter(success == TRUE) %>% 
+  select(bbl, rent_stabilized_units, soa_url) %>%
+  rename(ucbbl = bbl, uc2019 = rent_stabilized_units, pdfsoa2019 = soa_url)
+
+# Join data together, using a full_join to include all data from both tables
+rs_joined <- full_join(rs_19_cleaned, rs_20_cleaned, by = "ucbbl") %>% 
+  # filter out any bbls without rs units either year
+  filter(uc2018 > 0 | uc2019 > 0) 
+
+# Write CSV for export:
+rs_joined %>% write_csv(glue("{dir}/Data/rs_joined.csv"))
+```
+
+```{r}
+#in theory could I have just geocoded these tax bill documents, yes!
+rs_joined <- rs_joined %>% 
+  mutate(bbl = as.character(ucbbl))
+
+master_dhcr_geo_unit <- master_dhcr_geo %>% 
+  left_join(rs_joined, by = "bbl") %>% 
+  filter(!is.na(ucbbl)) #lost about 2k 
+
+#want to keep all the 2021 RS bldgs 
+master_dhcr_geo_unit <- master_dhcr_geo %>% 
+  left_join(rs_joined, by = "bbl")
+
+master_dhcr_geo_unit %>% write_csv(glue("{dir}/Data/dhcr_geo_unit_v2.csv")) #there's about a 2k difference 
+
+```
+

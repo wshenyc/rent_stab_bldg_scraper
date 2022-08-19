@@ -1,0 +1,10 @@
+body, html {
+  margin: 0 auto;
+  font-family: 'Raleway', sans-serif;
+}
+
+
+#mapContainer {
+  flex: 3.5;
+  height: 100vh;
+}

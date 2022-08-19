@@ -14,7 +14,7 @@ library(tabulizer)
 #work dir
 #dir <- "C:/Users/shenw/Documents/Fedex Day May 2022/FedEx-May-2022/FedEx Day"
 #home dir
-dir <- "/Users/winnieshen/Documents/GitHub/FedEx-May-2022/Fedex Day"
+#dir <- "/Users/winnieshen/Documents/GitHub/FedEx-May-2022/Fedex Day"
 file_ending <- "/Data/2020-DHCR-Bldg-"
   
 #dhcr_si <- pdf_text(glue("{dir}/Data/2020-DHCR-Bldg-Staten-Island.pdf"))
